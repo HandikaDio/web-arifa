@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hai Sayang</title>
+</head>
+<body style="font-family: Arial, sans-serif; text-align: center; margin-top: 20%;">
+    <h1>Hai sayang</h1>
+    <p>Buka kameramu dong</p>
+    <button id="openCamera" style="padding: 10px 20px; font-size: 16px;">Open</button>
+    <div id="cameraContainer" style="margin-top: 20px; display: none;">
+        <img id="videoStream" src="" style="width: 100%; max-width: 480px; border: 1px solid #ccc;" alt="Video Stream">
+    </div>
+
+    <script>
+        document.getElementById("openCamera").addEventListener("click", () => {
+            const cameraContainer = document.getElementById("cameraContainer");
+            const videoStream = document.getElementById("videoStream");
+
+            // Tampilkan kamera hanya setelah tombol ditekan
+            cameraContainer.style.display = "block";
+            videoStream.src = "/video_feed";
+        });
+    </script>
+</body>
+</html>
