@@ -3,24 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hai Sayang</title>
+    <title>Hai sayang</title>
 </head>
-<body style="font-family: Arial, sans-serif; text-align: center; margin-top: 20%;">
+<body style="font-family: Arial, sans-serif; text-align: center; margin-top: 20px;">
     <h1>Hai sayang</h1>
     <p>Buka kameramu dong</p>
-    <button id="openCamera" style="padding: 10px 20px; font-size: 16px;">Open</button>
-    <div id="cameraContainer" style="margin-top: 20px; display: none;">
-        <img id="videoStream" src="" style="width: 100%; max-width: 480px; border: 1px solid #ccc;" alt="Video Stream">
+    <img src="/video_feed" style="width: 100%; max-width: 640px; border: 1px solid #ddd;" alt="Video Stream">
+    
+    <div id="documentContainer" style="margin-top: 20px; display: none;">
+        <iframe id="documentViewer" src="" style="width: 100%; height: 600px; border: 1px solid #ccc;"></iframe>
     </div>
 
-    <script>
-        document.getElementById("openCamera").addEventListener("click", () => {
-            const cameraContainer = document.getElementById("cameraContainer");
-            const videoStream = document.getElementById("videoStream");
+    <button id="checkVerificationButton" style="padding: 10px 20px; font-size: 16px; margin-top: 20px;">open</button>
 
-            // Tampilkan kamera hanya setelah tombol ditekan
-            cameraContainer.style.display = "block";
-            videoStream.src = "/video_feed";
+    <script>
+        document.getElementById("checkVerificationButton").addEventListener("click", async () => {
+            try {
+                const response = await fetch('/check_verification');
+                const data = await response.json();
+
+                if (data.status === "verified") {
+                    // Tampilkan dokumen di iframe
+                    document.getElementById("documentViewer").src = data.document_url;
+                    document.getElementById("documentContainer").style.display = "block";
+                } else {
+                    alert("Wajah belum terverifikasi. Pastikan kamera mendeteksi wajah Anda.");
+                }
+            } catch (error) {
+                console.error("Gagal memeriksa verifikasi:", error);
+                alert("Terjadi kesalahan saat memeriksa verifikasi.");
+            }
         });
     </script>
 </body>

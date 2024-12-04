@@ -1,17 +1,23 @@
-from flask import Flask, render_template, Response
+from flask import Flask, render_template, Response, send_file, jsonify
 import cv2
 import face_recognition
 import numpy as np
 import os
+import time
 import subprocess
 
 app = Flask(__name__)
 
-# Konfigurasi dataset dan dokumen
+# Konfigurasi path untuk dataset dan dokumen
 DATASET_PATH = "dataset"
-DOCUMENT_PATH = "document/Seminar Proposal Dio 25 November.pdf"  # Path dokumen yang akan dibuka
+DOCUMENT_PATH = "document"  # Folder tempat dokumen disimpan
+DOCUMENT_NAME = "your_document.pdf"  # Nama dokumen yang akan ditampilkan
 
-# Memuat dataset wajah
+# Pastikan folder dataset dan dokumen ada
+os.makedirs(DATASET_PATH, exist_ok=True)
+os.makedirs(DOCUMENT_PATH, exist_ok=True)
+
+# Muat dataset wajah
 def load_known_faces_from_videos(dataset_path, sample_interval=30):
     """Muati encoding wajah dari semua video di folder dataset_path."""
     known_face_encodings = []
@@ -54,23 +60,14 @@ def extract_encodings_from_video(video_path, sample_interval=30):
     video_capture.release()
     return encodings
 
-def open_document(document_path):
-    """Membuka dokumen jika dikenali."""
-    try:
-        if os.path.exists(document_path):
-            if os.name == "nt":  # Windows
-                os.startfile(document_path)
-            elif os.name == "posix":  # Linux atau macOS
-                subprocess.Popen(["xdg-open", document_path])
-            print(f"Dokumen {document_path} dibuka.")
-        else:
-            print(f"Dokumen {document_path} tidak ditemukan.")
-    except Exception as e:
-        print(f"Gagal membuka dokumen: {e}")
-
 # Muat dataset di awal
 print("Memuat dataset dari video...")
 known_face_encodings, known_face_names = load_known_faces_from_videos(DATASET_PATH)
+
+# Simpan status verifikasi
+verified_faces = set()  # Menyimpan nama wajah yang telah diverifikasi
+cooldown_period = 5  # Interval waktu untuk reset
+last_open_time = 0
 
 # Rute utama untuk halaman web
 @app.route("/")
@@ -82,6 +79,8 @@ def index():
 def video_feed():
     def generate_frames():
         video_capture = cv2.VideoCapture(0)
+        global last_open_time
+
         while True:
             ret, frame = video_capture.read()
             if not ret:
@@ -102,10 +101,12 @@ def video_feed():
                 best_match_index = np.argmin(face_distances)
                 if matches[best_match_index]:
                     name = known_face_names[best_match_index]
-                    print(f"Wajah dikenali: {name}")
-                    
-                    # Buka dokumen jika wajah dikenali
-                    open_document(DOCUMENT_PATH)
+                    current_time = time.time()
+
+                    if name not in verified_faces or (current_time - last_open_time > cooldown_period):
+                        verified_faces.add(name)
+                        last_open_time = current_time
+                        print(f"Wajah dikenali: {name}")
                 else:
                     name = "Tidak dikenali"
 
@@ -124,6 +125,21 @@ def video_feed():
         video_capture.release()
 
     return Response(generate_frames(), mimetype="multipart/x-mixed-replace; boundary=frame")
+
+# Rute untuk memeriksa verifikasi
+@app.route("/check_verification")
+def check_verification():
+    if len(verified_faces) > 0:
+        return jsonify({"status": "verified", "document_url": "/get_document"})
+    return jsonify({"status": "unverified"})
+
+# Rute untuk menyajikan dokumen
+@app.route("/get_document")
+def get_document():
+    document_file = os.path.join(DOCUMENT_PATH, DOCUMENT_NAME)
+    if os.path.exists(document_file):
+        return send_file(document_file, as_attachment=False)
+    return "Dokumen tidak ditemukan.", 404
 
 if __name__ == "__main__":
     app.run(debug=True)
